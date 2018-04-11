@@ -3,6 +3,7 @@ import os
 import io
 import sqlite3
 import sys
+from datetime import datetime
 
 class Archivist:
 
@@ -27,6 +28,8 @@ class Archivist:
                 
                               
         self.location = location
+        if not os.path.exists(self.location):
+            os.makedirs(self.location)
 
     def get_location(self):
         return self.location
@@ -37,13 +40,16 @@ class Archivist:
         # update self.location variable
 
     def write(self, entry):
-        pass
-        # cut up the entry into a nice list or dictionary
-        # connect to db
-        # create the main table if it doesn't exist
-        # write the record to the table
-        # close db connection
-        # echo that it was written to the archive
+        
+        archive_path = os.path.join(self.location, 'archive.txt')
+        timestamp = datetime.now().isoformat(timespec='seconds')
+        
+        with open(archive_path, 'a') as archive_file:
+            archive_file.write(
+                '\n\n||\n\n' + timestamp + '\n\n|\n\n' + entry
+                )
+        # open the file for appending, append the current date and time
+        # followed by the entry
 
     def read(self, date):
         pass
