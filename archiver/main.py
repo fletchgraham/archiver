@@ -70,12 +70,9 @@ class Archivist:
         with open(archive_path, 'a') as archive_file:
             archive_file.write('\n\n||\n\n' + timestamp + '\n\n|\n\n' + entry)
 
-    def read(self, date):
-        pass
-        # connect to db
-        # search db by date
-        # close the db
-        # echo the result in a pretty way
+    def read(self):
+        with open (os.path.join(self.location, 'archive.txt'), 'r') as archive:
+            return archive.read()
         
 
 @click.group()
@@ -98,11 +95,8 @@ def write():
 def read():
     # spin up the archivist object
     archivist = Archivist()
-    # get a date from the user
-    date = input('Date >>> ')
-    # call the read method of the archivist on the date
-    archivist.read(date)
-    click.echo('Your entry: ')
+    click.echo('Your archive: \n')
+    click.echo(archivist.read())
 
 @archiver.command()
 def location():
