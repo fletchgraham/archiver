@@ -55,7 +55,7 @@ class Archivist:
         os.system(editor + ' ' + temp_path)
 
         # read the entry from the temp file once the user has saved their entry
-        with open(temp_path, 'r') as temp:
+        with open(temp_path, 'rU') as temp:
             entry = temp.read()
 
         # nuke all any temp files that were created by archiver or the text editor
