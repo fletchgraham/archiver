@@ -3,6 +3,7 @@ import os
 import io
 import sys
 from datetime import datetime
+from archiver.encipher import AESCipher
 
 class Archivist:
 
@@ -47,32 +48,50 @@ class Archivist:
         archive_path = os.path.join(self.location, 'archive.txt')
         temp_path = os.path.join(self.location, 'temp_entry.txt')
 
-        # create the temp file with a helpful message
-        with open(temp_path, 'w') as temp:
-            temp.write('')
+        # HACK check to see if there is an encrypted archive
+        if os.path.exists(os.path.join(self.location, 'archive.txt.enc')):
+            click.echo(
+                'Your archive is encrypted,' +
+                ' run "arc decrypt" and then enter your key.'
+                )
+            return False
+        else:
 
-        # open the temp file with an editor so the user can write their entry
-        os.system(editor + ' ' + temp_path)
+            # create the temp file with a helpful message
+            with open(temp_path, 'w') as temp:
+                temp.write('')
 
-        # read the entry from the temp file once the user has saved their entry
-        with open(temp_path, 'rU') as temp:
-            entry = temp.read()
+            # open the temp file with an editor so the user can write their entry
+            os.system(editor + ' ' + temp_path)
 
-        # nuke all any temp files that were created by archiver or the text editor
-        for file in os.listdir(self.location):
-            if 'temp_entry' in file:
-                os.remove(os.path.join(self.location, file))
+            # read the entry from the temp file once the user has saved their entry
+            with open(temp_path, 'rU') as temp:
+                entry = temp.read()
 
-        # get the current time
-        timestamp = datetime.now().isoformat(timespec='seconds')
+            # nuke all any temp files that were created by archiver or the text editor
+            for file in os.listdir(self.location):
+                if 'temp_entry' in file:
+                    os.remove(os.path.join(self.location, file))
 
-        # write the whole thing to the archive
-        with open(archive_path, 'a') as archive_file:
-            archive_file.write('\n\n||\n\n' + timestamp + '\n\n|\n\n' + entry)
+            # get the current time
+            timestamp = datetime.now().isoformat(timespec='seconds')
+
+            # write the whole thing to the archive
+            with open(archive_path, 'a') as archive_file:
+                archive_file.write('\n\n||\n\n' + timestamp + '\n\n|\n\n' + entry)
+            return True
 
     def read(self):
-        with open (os.path.join(self.location, 'archive.txt'), 'r') as archive:
-            return archive.read()
+        # HACK check to see if there is an encrypted archive
+        if os.path.exists(os.path.join(self.location, 'archive.txt.enc')):
+            click.echo(
+                'Your archive is encrypted,' +
+                ' run "arc decrypt" and then enter your key.'
+                )
+            return False
+        else:
+            with open (os.path.join(self.location, 'archive.txt'), 'r') as archive:
+                return archive.read()
         
 
 @click.group()
@@ -85,9 +104,14 @@ def write():
     # spin up the archivist object
     archivist = Archivist()
     # run the write method of the archivist
-    archivist.write()
+    written = archivist.write()
     # tell the user what happened
-    click.echo('Your entry was written to the archive.')
+
+    if written:
+        click.echo('Your entry was written to the archive.')
+
+    else:
+        pass
 
 
 
@@ -95,13 +119,64 @@ def write():
 def read():
     # spin up the archivist object
     archivist = Archivist()
-    click.echo('Your archive: \n')
     click.echo(archivist.read())
 
 @archiver.command()
 def location():
     archivist = Archivist()
     click.echo(archivist.get_location())
+
+@archiver.command()
+def encrypt():
+
+    # spin up archivist just to get location
+    archivist = Archivist()
+    path_to_txt = os.path.join(archivist.get_location(), 'archive.txt')
+
+    # ask the user for a key
+    key = input('Type in a key to use for encryption >>>')
+
+    # get the contents of the archive
+    with open(path_to_txt, 'r') as f:
+        contents = f.read()
+        
+    newfile = path_to_txt + '.enc'
+    
+    cipher = AESCipher(key)
+    
+    with open(newfile, 'wb') as new:
+        new.write(cipher.encrypt(contents))
+
+    # remove the unencrypted file
+    os.remove(path_to_txt)
+    
+    click.echo('Your file was encrypted.')
+
+@archiver.command()
+def decrypt():
+
+    # spin up archivist just to get location
+    archivist = Archivist()
+    path_to_enc = os.path.join(archivist.get_location(), 'archive.txt.enc')
+
+    # ask the user for a key
+    key = input('Type in a key to use for decryption >>>')
+    
+    with open(path_to_enc, 'rb') as f:
+        contents = f.read()
+        
+    newfile = path_to_enc[:-4]
+    
+    cipher = AESCipher(key)
+    
+    with open(newfile, 'w') as new:
+        new.write(cipher.decrypt(contents))
+
+    #remove encrypted file
+    os.remove(path_to_enc)
+    
+    click.echo('Your file was decrypted.')
+    
 
 archiver.add_command(location)
 
