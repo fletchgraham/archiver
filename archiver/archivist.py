@@ -1,43 +1,44 @@
 import click
 import os
+from os import path, makedirs
 import io
 import sys
 from datetime import datetime
 from archiver.encipher import AESCipher
+import json
+
 
 class Archivist:
 
     def __init__(self):
 
-        # get the path to the config file
-        home = os.path.expanduser('~')
-        root = os.path.join(home, '.archiver')
-        config_path = os.path.join(root, 'config.txt')
+        # homebase is where config file lives. doesn't change.
+        self.homebase = path.join(path.expanduser('~'), '.archiver')
+        self.config_path = path.join(self.homebase, 'config.json')
 
-        # if the config file doesn't exist, create it
-        # then load it into the location variable
-        if not os.path.exists(root):
-            os.makedirs(root)
+        # define the default config variable
+        self.config = {
+            'location': self.homebase,
+            'encrypted': False,
+            'archives': ['main']
+            }
 
-        if not os.path.exists(config_path):
-            with open(config_path, 'w') as config_file:
-                config_file.write(root)
+        # if homebase doesn't exist yet, create it
+        if not path.exists(self.homebase):
+            makedirs(self.homebase)
 
-        with open(config_path, 'r') as config_file:
-            location = os.path.normpath(config_file.read())
+        if not path.exists(self.config_path):
+            with open(self.config_path, 'w') as config_file:
+                json.dump(self.config, config_file)
+
+        with open(self.config_path, 'r') as config_file:
+            self.config = json.loads(config_file.read())
                 
-                              
-        self.location = location
-        if not os.path.exists(self.location):
-            os.makedirs(self.location)
+        if not os.path.exists(self.config['location']):
+            os.makedirs(self.config['location'])
 
     def get_location(self):
-        return self.location
-
-    def set_location(self, new_location):
-        pass
-        # change the contents of config file to new location
-        # update self.location variable
+        return self.config['location']
 
     def write(self):
 
@@ -45,11 +46,11 @@ class Archivist:
         editor = os.environ.get('EDITOR','vim')
 
         # define the locations of the archive file and the temp file
-        archive_path = os.path.join(self.location, 'archive.txt')
-        temp_path = os.path.join(self.location, 'temp_entry.txt')
+        archive_path = path.join(self.config['location'], 'archive.txt')
+        temp_path = path.join(self.homebase, 'temp_entry.txt')
 
         # HACK check to see if there is an encrypted archive
-        if os.path.exists(os.path.join(self.location, 'archive.txt.enc')):
+        if os.path.exists(os.path.join(self.config['location'], 'archive.txt.enc')):
             click.echo(
                 'Your archive is encrypted,' +
                 ' run "arc decrypt" and then enter your key.'
@@ -62,16 +63,16 @@ class Archivist:
                 temp.write('')
 
             # open the temp file with an editor so the user can write their entry
-            os.system(editor + ' ' + temp_path)
+            os.system(editor + ' ' + '"' + temp_path + '"')
 
             # read the entry from the temp file once the user has saved their entry
             with open(temp_path, 'rU') as temp:
                 entry = temp.read()
 
             # nuke all any temp files that were created by archiver or the text editor
-            for file in os.listdir(self.location):
+            for file in os.listdir(self.homebase):
                 if 'temp_entry' in file:
-                    os.remove(os.path.join(self.location, file))
+                    os.remove(os.path.join(self.homebase, file))
 
             # get the current time
             timestamp = datetime.now().isoformat(timespec='seconds')
@@ -83,12 +84,17 @@ class Archivist:
 
     def read(self):
         # HACK check to see if there is an encrypted archive
-        if os.path.exists(os.path.join(self.location, 'archive.txt.enc')):
+        if os.path.exists(os.path.join(self.config['location'], 'archive.txt.enc')):
             click.echo(
                 'Your archive is encrypted,' +
                 ' run "arc decrypt" and then enter your key.'
                 )
             return False
         else:
-            with open (os.path.join(self.location, 'archive.txt'), 'r') as archive:
+            with open (os.path.join(self.config['location'], 'archive.txt'), 'r') as archive:
                 return archive.read()
+
+
+
+
+            
