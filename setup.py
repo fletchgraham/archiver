@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='archiver',
-    version='1.0',
+    version='0.1',
     packages=['archiver'],
     install_requires=['Click', 'pycryptodome'],
     entry_points='''
